@@ -44,6 +44,7 @@
 #include "Gui/AutoCompletion.h"
 #include "Gui/ComposeWidget.h"
 #include "Gui/FromAddressProxyModel.h"
+#include "Gui/IconLoader.h"
 #include "Gui/LineEdit.h"
 #include "Gui/OverlayWidget.h"
 #include "Gui/PasswordDialog.h"
@@ -78,6 +79,7 @@ ComposeWidget::ComposeWidget(MainWindow *mainWindow, QSettings *settings, MSA::M
     m_settings(settings)
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
+    setWindowIcon(loadIcon(QLatin1String("document-edit")));
 
     Q_ASSERT(m_mainWindow);
     m_submission = new Composer::Submission(this, m_mainWindow->imapModel(), msaFactory);
