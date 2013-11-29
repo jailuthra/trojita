@@ -815,15 +815,30 @@ void Model::askForMessagesInMailbox(TreeItemMsgList *item)
         Q_ASSERT(item->accessFetchStatus() == TreeItem::LOADING);
         QModelIndex listIndex = item->toIndex(this);
         beginInsertRows(listIndex, 0, uidMapping.size() - 1);
+        cache()->prepareStreamedFlags(mailbox);
+        bool cachedFlagsOk = true;
         for (uint seq = 0; seq < static_cast<uint>(uidMapping.size()); ++seq) {
             TreeItemMessage *message = new TreeItemMessage(item);
             message->m_offset = seq;
             message->m_uid = uidMapping[ seq ];
             item->m_children << message;
-            QStringList flags = cache()->msgFlags(mailbox, message->m_uid);
+            StreamedUidAndFlags flagBundle;
+            if (cachedFlagsOk) {
+                flagBundle = cache()->iterateStreamedFlags();
+                if (!flagBundle.isValid) {
+                    qDebug() << "Cached flags corrupt: invalid data";
+                    cachedFlagsOk = false;
+                } else if (flagBundle.uid != message->m_uid) {
+                    qDebug() << "Cached flags corrupt: UID mismatch: this UID is" << message->m_uid
+                             << " but cache reports" << flagBundle.uid;
+                    cachedFlagsOk = false;
+                }
+            }
+            QStringList flags = cachedFlagsOk ? flagBundle.flags : cache()->msgFlags(mailbox, message->m_uid);
             flags.removeOne(QLatin1String("\\Recent"));
             message->m_flags = normalizeFlags(flags);
         }
+        cache()->freeStreamedFlags();
         endInsertRows();
         item->setFetchStatus(TreeItem::DONE); // required for FETCH processing later on
         // The list of messages was satisfied from cache. Do the same for the message counts, if applicable
